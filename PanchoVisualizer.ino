@@ -8,6 +8,8 @@
 #include <PanchoTankFlowData.h>
 #include <TM1637Display.h>
 #include <Arduino_JSON.h>
+#include "OneWire.h"
+#include "DallasTemperature.h"
 
 // #define LORA_M0 14
 // #define LORA_M1 13  
@@ -15,12 +17,12 @@
 bool loraActive = false;
 
 
-
+#define TEMPERATURE 27
 #define UI_CLK 33
 #define UI2_DAT 25
 #define UI3_DAT 26
 #define UI4_DAT 5
-#define UI5_DAT 4
+#define UI5_DAT 18
 #define UI6_DAT 23
 #define UI7_DAT 32
 #define RTC_BATT_VOLT 36
@@ -46,8 +48,11 @@ CRGB leds[NUM_LEDS];
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 bool isHost=true;
 #define UNIQUE_ID_SIZE 8
-#define RTC_CLK_OUT 18
+#define RTC_CLK_OUT 4
 
+
+OneWire oneWire(TEMPERATURE);
+DallasTemperature tempSensor(&oneWire);
 
 String stationName;
 uint8_t secondsSinceLastDataSampling=0;
@@ -603,7 +608,11 @@ void setup() {
   // put your setup code here, to run once:
 Serial.begin(115200 );
 pinMode(RTC_CLK_OUT, INPUT_PULLUP);
-
+ pinMode(RTC_CLK_OUT, INPUT_PULLUP);        // set up interrupt%20Pin
+	digitalWrite(RTC_CLK_OUT, HIGH);    // turn on pullup resistors
+	// attach interrupt%20To set_tick_tock callback on rising edge of INT0
+	attachInterrupt(digitalPinToInterrupt(RTC_CLK_OUT), clockTick, RISING);
+  
 FastLED.addLeds<WS2812, LED_PIN, GRB>(leds, NUM_LEDS);
  for(int i=0;i<NUM_LEDS;i++){
      leds[i] = CRGB(255, 255, 0);
@@ -611,6 +620,18 @@ FastLED.addLeds<WS2812, LED_PIN, GRB>(leds, NUM_LEDS);
    FastLED.show();
 	timeManager.start();
 	timeManager.PCF8563osc1Hz();
+
+  tempSensor.begin();
+  uint8_t address[8];
+  tempSensor.getAddress(address, 0);
+ for (  uint8_t i = 0; i < 8; i++){
+    //if (address[i] < 16) Serial.print("0");
+      serialNumber += String(address[i], HEX);
+ }
+
+  Serial.print("serial number:");
+  Serial.println(serialNumber);
+
   display1.setBrightness(0x0f);
   display2.setBrightness(0x0f);
   display3.setBrightness(0x0f);
@@ -626,10 +647,7 @@ FastLED.addLeds<WS2812, LED_PIN, GRB>(leds, NUM_LEDS);
 
   
 
-  pinMode(RTC_CLK_OUT, INPUT_PULLUP);        // set up interrupt%20Pin
-	digitalWrite(RTC_CLK_OUT, HIGH);    // turn on pullup resistors
-	// attach interrupt%20To set_tick_tock callback on rising edge of INT0
-	attachInterrupt(digitalPinToInterrupt(RTC_CLK_OUT), clockTick, RISING);
+ 
 
   wifiManager.start();
   bool stationmode = wifiManager.getStationMode();
@@ -662,15 +680,15 @@ FastLED.addLeds<WS2812, LED_PIN, GRB>(leds, NUM_LEDS);
       setApMode();
 
       
-      wifiManager.restartWifi();
-      ipAddress = wifiManager.getIpAddress();
-       Serial.print("2-ipaddress=");
-      Serial.println(ipAddress);
-      if (ipAddress == ""|| ipAddress == "0.0.0.0") {
-        setApMode();
-      } else {
-        setStationMode(ipAddress);
-      }
+      // wifiManager.restartWifi();
+      // ipAddress = wifiManager.getIpAddress();
+      //  Serial.print("2-ipaddress=");
+      // Serial.println(ipAddress);
+      // if (ipAddress == ""|| ipAddress == "0.0.0.0") {
+      //   setApMode();
+      // } else {
+      //   setStationMode(ipAddress);
+      // }
       
     } else {
       setStationMode(ipAddress);
@@ -693,10 +711,7 @@ FastLED.addLeds<WS2812, LED_PIN, GRB>(leds, NUM_LEDS);
   display1.showNumberDec(0, false);
   display2.showNumberDec(0, false);
   //wifiManager.restartWifi();
-  serialNumber = wifiManager.getMacAddress();
-  
- 
-   // e22ttl.begin();
+     // e22ttl.begin();
 
 // ResponseStructContainer c;
 // c = e22ttl.getConfiguration();
@@ -1069,6 +1084,7 @@ void setApMode() {
 }
 
 void setStationMode(String ipAddress) {
+  wifiActive=true;
 Serial.println("settting Station mode, address ");
     Serial.println(ipAddress);
   leds[0] = CRGB(0, 0, 255);
