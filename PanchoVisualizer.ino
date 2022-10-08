@@ -1,6 +1,4 @@
 #include "Arduino.h"  
-#include "LoRa_E22.h"
-
 #include <Timer.h>
 #include <PCF8563TimeManager.h>
 #include <SPI.h>
@@ -14,6 +12,7 @@
 // #define LORA_M0 14
 // #define LORA_M1 13  
 // #define LORA_AUX 15
+bool loraActive = false;
 
 
 
@@ -140,6 +139,7 @@ String display2HumURL = "http://Tlaloc.local/TeleonomeServlet?formName=GetDeneWo
 String display3HumURL = "http://Tlaloc.local/TeleonomeServlet?formName=GetDeneWordValueByIdentity&identity=Tlaloc:Purpose:Sensor%20Data:Short%20Term%20Weather%20Forecast:Short%20Term%20Forecast%20Period%203%20Humidity";
 String display4HumURL = "http://Tlaloc.local/TeleonomeServlet?formName=GetDeneWordValueByIdentity&identity=Tlaloc:Purpose:Sensor%20Data:Short%20Term%20Weather%20Forecast:Short%20Term%20Forecast%20Period%204%20Humidity";
 String display5HumURL = "http://Tlaloc.local/TeleonomeServlet?formName=GetDeneWordValueByIdentity&identity=Tlaloc:Purpose:Sensor%20Data:Short%20Term%20Weather%20Forecast:Short%20Term%20Forecast%20Period%205%20Humidity";
+
 
 
 JSONVar jsonData;
@@ -428,6 +428,55 @@ void updateDisplaysHumidity(){
   display1.setSegments(hum, 2, 0);
 }
 
+void updateDisplaysRa(){
+  int value1 = processDisplayValue(display1URL,&displayData);
+  
+  if(displayData.dp>0){
+    display2.showNumberDecEx(value1, (0x80 >> displayData.dp), false);
+  }else{
+    display2.showNumberDec(value1, false);
+  }
+  delay(100);
+
+
+  int value2 = processDisplayValue(display2URL,&displayData);
+ 
+  if(displayData.dp>0){
+    display3.showNumberDecEx(value2, (0x80 >> displayData.dp), false);
+  }else{
+     display3.showNumberDec(value2, false);
+  }
+  delay(100);
+
+  int value3 = processDisplayValue(display3URL,&displayData);
+  
+  if(displayData.dp>0){
+    display4.showNumberDecEx(value3, (0x80 >> displayData.dp), false);
+  }else{
+    display4.showNumberDec(value3, false);
+  }
+  delay(100);
+
+  int value4 = processDisplayValue(display4URL,&displayData);
+  
+  if(displayData.dp>0){
+    display5.showNumberDecEx(value4, (0x80 >> displayData.dp), false);
+  }else{
+    display5.showNumberDec(value4, false);
+  }
+  delay(100);
+
+  display6.clear();
+  delay(100);   
+  const uint8_t ra[] = {
+     SEG_E | SEG_G,  // R
+     SEG_A | SEG_B | SEG_C | SEG_G | SEG_E| SEG_F  // a
+  };
+  display1.clear();
+  display1.setSegments(ra, 2, 0);
+}
+
+
 void updateDisplays(){
   for(int i=4;i<8;i++){
      leds[i] = CRGB(255, 0, 255);
@@ -583,47 +632,53 @@ FastLED.addLeds<WS2812, LED_PIN, GRB>(leds, NUM_LEDS);
 	attachInterrupt(digitalPinToInterrupt(RTC_CLK_OUT), clockTick, RISING);
 
   wifiManager.start();
+  bool stationmode = wifiManager.getStationMode();
+  Serial.print("Starting wifi stationmode=");
+  Serial.println(stationmode);
+
+//  serialNumber = wifiManager.getMacAddress();
+  wifiManager.setSerialNumber(serialNumber);
+  wifiManager.setLora(loraActive);
   String ssid = wifiManager.getSSID();
-  String ipAddress="";
-  if(ssid==""){
-      for(int i=0;i<NUM_LEDS;i++){
-			leds[i] = CRGB(255, 0, 0);
-		}
-		FastLED.show();
-    wifiActive=false;
-  }else{
-    ipAddress = wifiManager.getIpAddress();  
-    if(ipAddress=="0.0.0.0"){
-      for(int i=0;i<NUM_LEDS;i++){
-        leds[i] = CRGB(0, 255, 255);
+  String ipAddress = "";
+  uint8_t ipi;
+  for (int i = 0; i < NUM_LEDS; i++) {
+    leds[i] = CRGB(0, 0, 0);
+  }
+  FastLED.show();
+  if (stationmode) {
+     ipAddress = wifiManager.getIpAddress();
+    Serial.print("ipaddress=");
+    Serial.println(ipAddress);
+    
+    if (ipAddress == ""|| ipAddress == "0.0.0.0") {
+      for (int i = 0; i < 4; i++) {
+        leds[i] = CRGB(255, 0, 0);
+      }
+      for (int i = 4; i < 8; i++) {
+        leds[i] = CRGB(255, 255, 0);
       }
       FastLED.show();
+      setApMode();
+
+      
       wifiManager.restartWifi();
       ipAddress = wifiManager.getIpAddress();
-      if(ipAddress=="0.0.0.0"){
-        for(int i=0;i<NUM_LEDS;i++){
-          leds[i] = CRGB(255, 0, 0);
-        }
-      }else{
-        for(int i=0;i<NUM_LEDS;i++){
-          leds[i] = CRGB(0, 0, 0);
-        }
-        leds[0] = CRGB(0, 0, 255);
-        wifiActive=true;
+       Serial.print("2-ipaddress=");
+      Serial.println(ipAddress);
+      if (ipAddress == ""|| ipAddress == "0.0.0.0") {
+        setApMode();
+      } else {
+        setStationMode(ipAddress);
       }
-      FastLED.show();
-    }else{
-      for(int i=0;i<NUM_LEDS;i++){
-        leds[i] = CRGB(0, 0, 0);
-      }
-      leds[0] = CRGB(0, 0, 255);
-      wifiActive=true;
+      
+    } else {
+      setStationMode(ipAddress);
     }
+  } else {
+     setApMode();
   }
   
-
-
-uint8_t ipi;
     for(int i=0;i<4;i++){
       ipi = GeneralFunctions::getValue(ipAddress, '.', i).toInt();
       display1.showNumberDec(ipi, false); 
@@ -667,35 +722,55 @@ bool opmode=false;
     wifiManager.setCurrentTimerRecord(currentTimerRecord);
 
     opmode = digitalRead(OP_MODE);
-    bool weatherStationMode=false;
+    bool weatherStationMode=true;
 
     if(wifiActive){
       if(weatherStationMode){
-        if(currentTimerRecord.second==0 || currentTimerRecord.second==30){
-          updateDisplaysCloud();
+        if(currentTimerRecord.second==0 ){
+           updateDisplaysRa();
+          leds[3] = CRGB(0, 255, 0);
+          leds[4] = CRGB(0, 0, 0);
+          leds[5] = CRGB(0, 0, 0);
+          leds[6] = CRGB(0, 0, 0);
+          leds[7] = CRGB(0, 0, 0);
+            FastLED.show(); 
           if(currentTimerRecord.minute==0){
         //		Serial.println(F("New Hour"));
             if(currentTimerRecord.hour==0){
             //	Serial.println(F("New Day"));
             }
           }
-        }else if(currentTimerRecord.second==8 || currentTimerRecord.second==38){
-          updateDisplaysTemp();
+        }else if(currentTimerRecord.second==12){
+         updateDisplaysCloud();
+          leds[3] = CRGB(0, 255, 0);
           leds[4] = CRGB(0, 255, 0);
           leds[5] = CRGB(0, 0, 0);
           leds[6] = CRGB(0, 0, 0);
+          leds[7] = CRGB(0, 0, 0);
           FastLED.show();    
-        }else if(currentTimerRecord.second==16|| currentTimerRecord.second==46){
-          updateDisplaysRain();
+        }else if(currentTimerRecord.second==24){
+          updateDisplaysTemp();
+          leds[3] = CRGB(0, 255, 0);
           leds[4] = CRGB(0, 255, 0);
           leds[5] = CRGB(0, 255, 0);
           leds[6] = CRGB(0, 0, 0);
+          leds[7] = CRGB(0, 0, 0);
           FastLED.show();    
-        }else if(currentTimerRecord.second==24|| currentTimerRecord.second==54){
-          updateDisplaysHumidity();
+        }else if(currentTimerRecord.second==36){
+          updateDisplaysRain();
+          leds[3] = CRGB(0, 255, 0);
           leds[4] = CRGB(0, 255, 0);
           leds[5] = CRGB(0, 255, 0);
           leds[6] = CRGB(0, 255, 0);
+          leds[7] = CRGB(0, 0, 0);
+          FastLED.show();    
+        }else if(currentTimerRecord.second==48){
+          updateDisplaysHumidity();
+          leds[3] = CRGB(0, 255, 0);
+          leds[4] = CRGB(0, 255, 0);
+          leds[5] = CRGB(0, 255, 0);
+          leds[6] = CRGB(0, 255, 0);
+          leds[7] = CRGB(0, 255, 0);
           FastLED.show();    
         }
       }else{
@@ -952,4 +1027,60 @@ bool opmode=false;
 		}
 
 	}
+}
+
+
+void setApMode() {
+
+  leds[0] = CRGB(0, 0, 255);
+  FastLED.show();
+  Serial.println("settting AP mode");
+  //
+  // set ap mode
+  //
+//  wifiManager.configWifiAP("PanchoTankFlowV1", "", "PanchoTankFlowV1");
+  String apAddress = wifiManager.getApAddress();
+   Serial.println("settting AP mode, address ");
+    Serial.println(apAddress);
+  const uint8_t ap[] = {
+    SEG_F | SEG_G | SEG_A | SEG_B | SEG_C | SEG_E,  // A
+    SEG_F | SEG_G | SEG_A | SEG_B | SEG_E           // P
+  };
+  display1.setSegments(ap, 2, 0);
+  delay(1000);
+  uint8_t ipi;
+  
+  for (int i = 0; i < 4; i++) {
+    ipi = GeneralFunctions::getValue(apAddress, '.', i).toInt();
+    display1.showNumberDec(ipi, false);
+    delay(1000);
+  }
+  for (int i = 2; i < NUM_LEDS; i++) {
+    leds[i] = CRGB(0, 0, 0);
+  }
+  leds[0] = CRGB(0, 255, 0);
+  if (loraActive) {
+    leds[1] = CRGB(0, 0, 255);
+  } else {
+    leds[1] = CRGB(255, 0, 0);
+  }
+
+  FastLED.show();
+}
+
+void setStationMode(String ipAddress) {
+Serial.println("settting Station mode, address ");
+    Serial.println(ipAddress);
+  leds[0] = CRGB(0, 0, 255);
+  FastLED.show();
+  const uint8_t ip[] = {
+    SEG_F | SEG_E,                         // I
+    SEG_F | SEG_G | SEG_A | SEG_B | SEG_E  // P
+  };
+  uint8_t ipi;
+  for (int i = 0; i < 4; i++) {
+    ipi = GeneralFunctions::getValue(ipAddress, '.', i).toInt();
+    display1.showNumberDec(ipi, false);
+    delay(1000);
+  }
 }
