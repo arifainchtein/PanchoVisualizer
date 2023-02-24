@@ -168,7 +168,8 @@ String display5HumURL = "http://Tlaloc.local/TeleonomeServlet?formName=GetDeneWo
 
 String display1SentoTubURL = "http://Sento.local/TeleonomeServlet?formName=GetDeneWordValueByIdentity&identity=Sento:Purpose:Sensor%20Data:Tub%20Temperature:TubTemperature";
 String display2SentoHeatURL = "http://Sento.local/TeleonomeServlet?formName=GetDeneWordValueByIdentity&identity=Sento:Purpose:Sensor%20Data:Heat%20Exchange%20Temperature:HeatExchangeTemperature";
-
+String display3SolarRadURL = "http://Tlaloc.local/TeleonomeServlet?formName=GetDeneWordValueByIdentity&identity=Tlaloc:Purpose:Sensor%20Data:Solar%20Radiation:Solar%20Radiation%20Data";
+String display4SolarRadTodayURL = "http://Tlaloc.local/TeleonomeServlet?formName=GetDeneWordValueByIdentity&identity=Tlaloc:Mnemosyne:Mnemosyne%20Today:Solar%20Radiation%20Daily%20Total:Solar%20Radiation%20Daily%20Total";
 
 JSONVar jsonData;
 //
@@ -573,7 +574,7 @@ void updateDisplaysRa() {
   }else if(rv>=52 && rv<54.80){
     leds[1] = CRGB(0, 0, 255);
   }else if(rv>=54.80){
-    leds[1] = CRGB(0, 255, 255);
+    leds[1] = CRGB(255, 255, 255);
   }
   FastLED.show();
   if (dp1 > 0) {
@@ -634,6 +635,13 @@ void updateDisplaysSento() {
   int value2 = processDisplayValue(display2SentoHeatURL, &displayData);
   int dp2 = displayData.dp;
  
+
+  int value5 = processDisplayValue(display3SolarRadURL, &displayData);
+  int dp5 = displayData.dp;
+
+  int value6 = processDisplayValue(display4SolarRadTodayURL, &displayData);
+  int dp6 = displayData.dp;
+
   if (dp1 > 0) {
     display2.showNumberDecEx(value1, (0x80 >> dp1), false);
   } else {
@@ -651,8 +659,18 @@ void updateDisplaysSento() {
   delay(20);
 
   display4.clear();
-  display5.clear();
-  display6.clear();
+
+  if (dp5 > 0) {
+    display5.showNumberDecEx(value5, (0x80 >> dp5), false);
+  } else {
+    display5.showNumberDec(value5, false);
+  }
+   if (dp6 > 0) {
+    display6.showNumberDecEx(value6, (0x80 >> dp6), false);
+  } else {
+    display6.showNumberDec(value6, false);
+  }
+  
   delay(100);
   const uint8_t sento[] = {
     SEG_A | SEG_C | SEG_D | SEG_F | SEG_G,  //S
