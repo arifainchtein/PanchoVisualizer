@@ -136,8 +136,7 @@ const char* display1URL = "http://Ra.local/TeleonomeServlet?formName=GetDeneWord
 const char* display2URL = "http://Ra.local/TeleonomeServlet?formName=GetDeneWordValueByIdentity&identity=Ra:Purpose:Sensor%20Data:Now:Charge";
 const char* display3URL = "http://Ra.local/TeleonomeServlet?formName=GetDeneWordValueByIdentity&identity=Ra:Purpose:Sensor%20Data:Now:Load";
 const char* display4URL = "http://Ra.local/TeleonomeServlet?formName=GetDeneWordValueByIdentity&identity=Ra:Purpose:Operational%20Data:Generator:Generator%20Running%20Time";
-const char* display5URL = "http://Sento.local/TeleonomeServlet?formName=GetDeneWordValueByIdentity&identity=Sento:Purpose:Sensor%20Data:Tub%20Temperature:TubTemperature";
-const char* display6URL = "http://Sento.local/TeleonomeServlet?formName=GetDeneWordValueByIdentity&identity=Sento:Purpose:Sensor%20Data:Heat%20Exchange%20Temperature:HeatExchangeTemperature";
+const char* display5URL = "http://Ra.local/TeleonomeServlet?formName=GetDeneWordValueByIdentity&identity=Ra:Mnemosyne:Mnemosyne%20Today:Daily%20Energy%20Balance:Daily%20Energy%20Balance";
 
 
 String display1CloudURL = "http://Tlaloc.local/TeleonomeServlet?formName=GetDeneWordValueByIdentity&identity=Tlaloc:Purpose:Sensor%20Data:Short%20Term%20Weather%20Forecast:Short%20Term%20Forecast%20Period%201%20Cloudiness";
@@ -228,8 +227,9 @@ void updateServerStatus(){
     // server status url returns:
     //{"Status":"Success","Message":"","Time":"2023-02-23 20:03:55.112","Data":"{\"servers\":[{\"instanceid\":2781656802463868147,\"name\":\"digital-stables\",\"externalIpAddress\":\"34.129.116.33\",\"internalIpAddress\":\"10.192.0.3\",\"status\":\"TERMINATED\"},{\"instanceid\":7870752577853258605,\"name\":\"digital-stables-validation\",\"internalIpAddress\":\"10.192.0.2\",\"status\":\"TERMINATED\"}]}"}
     const uint8_t ds[] = {
-        SEG_B | SEG_B | SEG_D | SEG_E | SEG_G,          // D
+        SEG_B | SEG_C | SEG_D | SEG_E | SEG_G,          // D
         SEG_A |SEG_C |SEG_D | SEG_F | SEG_G             // S
+    
       };
       display1.clear();
       display2.clear();
@@ -617,8 +617,6 @@ void updateDisplaysRa() {
   }
   delay(20);
 
-  display6.clear();
-  delay(100);
   const uint8_t ra[] = {
     SEG_E | SEG_G,                                 // R
     SEG_A | SEG_B | SEG_C | SEG_G | SEG_E | SEG_F  // a
@@ -735,12 +733,7 @@ void updateDisplays() {
   }
   delay(100);
 
-  int value6 = processDisplayValue(display6URL, &displayData);
-  if (displayData.dp > 0) {
-    display6.showNumberDecEx(value6, (0x80 >> displayData.dp), false);
-  } else {
-    display6.showNumberDec(value6, false);
-  }
+ 
 
   delay(100);
 
@@ -779,11 +772,27 @@ int processDisplayValue(String displayURL, struct DisplayData* displayData) {
       if (val == NULL) {
         double valueF = (double)jsonData["Value"];
         if (valueF == (int)valueF) {
-          value = (int)valueF;
-          displayData->dp = -1;
-        } else {
-          value = (int)(100 * valueF);
-          displayData->dp = 1;
+          if(valueF<0){
+            if(valueF<-1000){
+              value = (int)(valueF/10);
+              displayData->dp = 1;
+            }else{
+              value = (int)valueF;
+              displayData->dp = -1;
+            }
+          }else{
+            if(valueF>9999){  
+               value = (int)(valueF/1000);
+                displayData->dp = 0;
+            }else{
+              value = (int)valueF;
+              displayData->dp = -1;
+            }          
+          }
+          
+        } else { 
+            value = (int)(100 * valueF);
+            displayData->dp = 1;
         }
       } else {
         String s((const char*)jsonData["Value"]);
