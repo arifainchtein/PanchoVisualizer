@@ -136,7 +136,7 @@ const char* display1URL = "http://Ra.local/TeleonomeServlet?formName=GetDeneWord
 const char* display2URL = "http://Ra.local/TeleonomeServlet?formName=GetDeneWordValueByIdentity&identity=Ra:Purpose:Sensor%20Data:Now:Charge";
 const char* display3URL = "http://Ra.local/TeleonomeServlet?formName=GetDeneWordValueByIdentity&identity=Ra:Purpose:Sensor%20Data:Now:Load";
 const char* display4URL = "http://Ra.local/TeleonomeServlet?formName=GetDeneWordValueByIdentity&identity=Ra:Purpose:Operational%20Data:Generator:Generator%20Running%20Time";
-const char* display5URL = "http://Ra.local/TeleonomeServlet?formName=GetDeneWordValueByIdentity&identity=Ra:Mnemosyne:Mnemosyne%20Today:Daily%20Energy%20Balance:Daily%20Energy%20Balance";
+const char* display5URL = "http://Ra.local/TeleonomeServlet?formName=GetDeneWordValueByIdentity&identity=Ra:Purpose:Sensor%20Data:Now:Energy%20Balance";
 
 
 String display1CloudURL = "http://Tlaloc.local/TeleonomeServlet?formName=GetDeneWordValueByIdentity&identity=Tlaloc:Purpose:Sensor%20Data:Short%20Term%20Weather%20Forecast:Short%20Term%20Forecast%20Period%201%20Cloudiness";
